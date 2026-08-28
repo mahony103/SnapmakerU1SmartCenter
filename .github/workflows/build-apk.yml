@@ -30,7 +30,7 @@ jobs:
       - name: ZIP'i aç
         run: |
           mkdir -p project
-          unzip unzip -o SnapmakerU1SmartCenter_v0_2_GitHubBuild.zip -d project
+          unzip -o SnapmakerU1SmartCenter_v0_2_GitHubBuild.zip -d project
 
       - name: APK oluştur
         working-directory: project/SnapmakerU1SmartCenter_v0_2
