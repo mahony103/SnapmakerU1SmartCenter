@@ -1,0 +1,44 @@
+name: Build Snapmaker U1 Smart Center APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Projeyi indir
+        uses: actions/checkout@v4
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle kur
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: ZIP'i aç
+        run: |
+          mkdir -p project
+          unzip -o SnapmakerU1SmartCenter_v0_1_GitHubBuild.zip -d project
+
+      - name: APK oluştur
+        working-directory: project/SnapmakerU1SmartCenter_v0_1
+        run: gradle :app:assembleDebug --no-daemon
+
+      - name: APK'yı yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnapmakerU1SmartCenter-debug
+          path: project/SnapmakerU1SmartCenter_v0_1/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
