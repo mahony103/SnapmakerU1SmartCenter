@@ -1,0 +1,105 @@
+name: Build Snapmaker U1 Smart Center V1.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: GitHub deposunu indir
+        uses: actions/checkout@v4
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Gradle kur
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Android ZIP dosyasını bul
+        shell: bash
+        run: |
+          set -e
+
+          ZIP_FILE=$(find . -maxdepth 1 -type f -iname "*.zip" -print -quit)
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "HATA: Android proje ZIP dosyası bulunamadı."
+            exit 1
+          fi
+
+          echo "Bulunan dosya: $ZIP_FILE"
+
+          rm -rf project
+          mkdir -p project
+
+          unzip -o "$ZIP_FILE" -d project
+
+      - name: Android projesini bul
+        shell: bash
+        run: |
+          set -e
+
+          SETTINGS_FILE=$(find project -type f \
+            \( -name "settings.gradle" -o -name "settings.gradle.kts" \) \
+            -print -quit)
+
+          if [ -z "$SETTINGS_FILE" ]; then
+            echo "HATA: settings.gradle bulunamadı."
+            echo "ZIP içerisindeki Android proje yapısı kontrol edilmeli."
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$SETTINGS_FILE")
+
+          echo "Android proje klasörü: $PROJECT_DIR"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+      - name: Android projesini kontrol et
+        shell: bash
+        run: |
+          set -e
+
+          echo "Proje:"
+          ls -la "$PROJECT_DIR"
+
+          echo ""
+          echo "Gradle dosyaları:"
+          find "$PROJECT_DIR" -maxdepth 2 \
+            \( -name "build.gradle" -o -name "build.gradle.kts" \
+            -o -name "settings.gradle" -o -name "settings.gradle.kts" \) \
+            -print
+
+      - name: APK oluştur
+        shell: bash
+        run: |
+          set -e
+
+          cd "$PROJECT_DIR"
+
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew :app:assembleDebug --no-daemon
+          else
+            gradle :app:assembleDebug --no-daemon
+          fi
+
+      - name: APK'yı yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnapmakerU1SmartCenter-V1.0
+          path: |
+            project/**/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
